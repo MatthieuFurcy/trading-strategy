@@ -1,0 +1,62 @@
+//@version=1
+strategy("Bollinger Bands & Supertrend Strategy with Real-Time Window", overlay=true)
+
+// Paramètres des Bollinger Bands
+bbLength = input.int(20, title="Bollinger Bands Length")
+bbMultiplier = input.float(2.0, title="Bollinger Bands Multiplier")
+
+// Calcul des Bollinger Bands
+basis = ta.sma(close, bbLength)
+dev = bbMultiplier * ta.stdev(close, bbLength)
+upperBand = basis + dev
+lowerBand = basis - dev
+
+// Plot des Bollinger Bands
+plot(upperBand, color=color.red, title="Upper Bollinger Band")
+plot(basis, color=color.blue, title="Bollinger Basis")
+plot(lowerBand, color=color.green, title="Lower Bollinger Band")
+
+// Paramètres du Supertrend
+atrPeriod = input.int(10, title="Supertrend ATR Period")
+superMultiplier = input.float(3.0, title="Supertrend Multiplier")
+
+// Calcul du Supertrend
+[supertrend, superTrendDirection] = ta.supertrend(superMultiplier, atrPeriod)
+
+// Plot du Supertrend
+plot(supertrend, color=superTrendDirection == 1 ? color.green : color.red, title="Supertrend")
+
+// Conditions pour un achat
+buyCondition = ta.crossover(close, lowerBand) and superTrendDirection == 1
+
+// Conditions pour une vente
+sellCondition = ta.crossunder(close, upperBand) and superTrendDirection == -1
+
+// Envoi d'ordres et de signaux
+if (buyCondition)
+    strategy.entry("Long", strategy.long)
+
+if (sellCondition)
+    strategy.close("Long")
+    strategy.entry("Short", strategy.short)
+
+// Indications visuelles des signaux sur le graphique
+plotshape(series=buyCondition, title="Buy Signal", location=location.belowbar, color=color.green, style=shape.labelup, text="BUY")
+plotshape(series=sellCondition, title="Sell Signal", location=location.abovebar, color=color.red, style=shape.labeldown, text="SELL")
+
+// Fenêtre flottante pour indiquer "BUY" ou "SELL"
+var table signalTable = table.new(position.top_right, 1, 1, bgcolor=color.new(color.black, 0))
+
+if (buyCondition)
+    table.cell(table_id=signalTable, column=0, row=0, text="BUY", bgcolor=color.green, text_color=color.white, text_size=size.large)
+else if (sellCondition)
+    table.cell(table_id=signalTable, column=0, row=0, text="SELL", bgcolor=color.red, text_color=color.white, text_size=size.large)
+else
+    table.cell(table_id=signalTable, column=0, row=0, text="WAIT", bgcolor=color.gray, text_color=color.white, text_size=size.large)
+
+// Paramètres de backtest (options ajustables)
+stopLoss = input.float(1.5, title="Stop Loss (%)")
+takeProfit = input.float(3.0, title="Take Profit (%)")
+
+// Calcul du Stop Loss et Take Profit
+strategy.exit("Take Profit/Stop Loss", "Long", stop=close * (1 - stopLoss / 100), limit=close * (1 + takeProfit / 100))
