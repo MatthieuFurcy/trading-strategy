@@ -1,4 +1,4 @@
-//@version=1
+//@version=5
 strategy("Bollinger Bands & Supertrend Strategy with Real-Time Window", overlay=true)
 
 // Paramètres des Bollinger Bands
@@ -21,7 +21,11 @@ atrPeriod = input.int(10, title="Supertrend ATR Period")
 superMultiplier = input.float(3.0, title="Supertrend Multiplier")
 
 // Calcul du Supertrend
-[supertrend, superTrendDirection] = ta.supertrend(superMultiplier, atrPeriod)
+atr = ta.atr(atrPeriod)
+upper = close[1] + superMultiplier * atr
+lower = close[1] - superMultiplier * atr
+supertrend = close > lower[1] ? lower : upper
+superTrendDirection = close > supertrend ? 1 : -1
 
 // Plot du Supertrend
 plot(supertrend, color=superTrendDirection == 1 ? color.green : color.red, title="Supertrend")
